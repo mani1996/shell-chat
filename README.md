@@ -7,4 +7,4 @@ facilitating chat
 
 Shell is invoked by the command:
 
- **python shell-chat-client.py  port   username  **
+ **python shell-chat-client.py < port > < username > **
