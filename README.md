@@ -7,4 +7,9 @@ facilitating chat
 
 Shell is invoked by the command:
 
- **python shell-chat-client.py < port > < username > **
+ *python shell-chat-client.py port username* 
+
+**Third party dependencies:**
+* cJSON - https://github.com/DaveGamble/cJSON
+
+  Place cJSON folder on the project root for Makefile to work
