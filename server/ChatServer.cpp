@@ -183,11 +183,9 @@ void ChatServer::communicate(){
 							delClient(*(sockIter++));
 						}
 						else if(msgLength == 0){
-							printf("Connection closed by client\n");
 							delClient(*(sockIter++));
 						}
 						else{
-							printf("PARSE\n");
 							buf[msgLength] = '\0';
 							parseMessage(buf,sockIter);
 						}
