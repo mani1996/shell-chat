@@ -16,7 +16,8 @@ class ChatClient(cmd.Cmd):
 	Type "help" to view list of commands. 
 	Type "help <command>" to view command description.
 
-	NOTE : Automatic refresh isn't available as of now. Press Enter to check for new messages
+	NOTE : Automatic refresh isn't available as of now. 
+	Press Enter to check for new messages
 	'''
 	doc_header = 'Commands'
 	ruler = '-'
@@ -27,7 +28,11 @@ class ChatClient(cmd.Cmd):
 		self.Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
 		self.Socket.connect(('localhost',int(port)))
 		self.do_name(username, True)
-		self.prompt = username + ': '
+		self.setPrompt(username)
+
+
+	def setPrompt(self, name):
+		self.prompt = name + ':'
 
 
 	def emptyline(self):
@@ -55,16 +60,19 @@ class ChatClient(cmd.Cmd):
 		print response
 
 
-	def do_name(self,line,initial = False):
+	def do_name(self,name,initial = False):
 		'Change your name. Only alphabets, digits and underscores are allowed in the name'
 		self.refresh()
-		self.Socket.send('name ' + line)
+		name = name.split()[0]
+		self.Socket.send('name ' + name)
 		response = self.Socket.recv(1024)
 		if not initial:
 			print response
+
+		if response == 'ERROR : username already exists!' :
+			raise Exception('Username already in use!')
 		else:
-			if response == 'ERROR : username already exists!' :
-				raise Exception('Username already in use!') 
+			self.setPrompt(name)
 
 
 	def do_ol(self,line):
