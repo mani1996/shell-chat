@@ -1,9 +1,7 @@
 import cmd
-import re
 import socket
 import sys
-import threading
-import time
+import json
 
 
 class ChatClient(cmd.Cmd):
@@ -24,13 +22,6 @@ class ChatClient(cmd.Cmd):
 	ruler = '-'
 
 
-	@staticmethod
-	def validUsername(name):
-		pattern = re.compile(r'[a-zA-Z0-9_]+')
-		match = pattern.match(name)
-		return (match is not None) and (match.group() == name)  
-
-
 	def __init__(self, port, username):
 		cmd.Cmd.__init__(self)
 		self.Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -42,6 +33,12 @@ class ChatClient(cmd.Cmd):
 
 	def setPrompt(self, name):
 		self.prompt = name + ':'
+
+
+	def Request(self, request):
+		self.Socket.send(json.dumps(request))
+		data = self.Socket.recv(1024) # Assuming that response size is limited to 1024 bytes for now
+		return data
 
 
 	def emptyline(self):
@@ -59,9 +56,21 @@ class ChatClient(cmd.Cmd):
 		'Send message privately to an user. Syntax is "psend <username> <message>"'
 		self.updateMessages()
 		self.updateUsers()
-		self.Socket.send('psend ' + line)
-		response = self.Socket.recv(1024)
-		print response
+
+		spacePos = line.find(' ')
+		assert(0 < spacePos < len(line)-1)
+
+		requestData = {
+			'type' : 'psend',
+			'username' : line[:spacePos],
+			'message' : line[spacePos+1:]
+		}
+
+		response = json.loads(self.Request(requestData))
+
+		print
+		print response['message']
+		print
 
 
 	def complete_psend(self, text, *ignore):
@@ -72,8 +81,13 @@ class ChatClient(cmd.Cmd):
 		'Send message to the chatroom. Syntax is "gsend <message>"'
 		self.updateMessages()
 		self.updateUsers()
-		self.Socket.send('gsend ' + line)
-		response = self.Socket.recv(1024)
+
+		requestData = {
+			'type' : 'gsend',
+			'message' : line
+		}
+
+		response = self.Request(requestData)
 		print response
 
 
@@ -85,37 +99,71 @@ class ChatClient(cmd.Cmd):
 		'Change your name. Only alphabets, digits and underscores are allowed in the name'
 		self.updateMessages()
 		self.updateUsers()
-		name = name.split()[0]
-		self.Socket.send('name ' + name)
-		response = self.Socket.recv(1024)
-		if not initial:
-			print response
 
-		if response == 'ERROR : username already exists!' :
-			raise Exception('Username already in use!')
-		else:
-			self.setPrompt(name)
+		requestData = {
+			'type' : 'name',
+			'newName' : name.strip()
+		}
+
+		response = json.loads(self.Request(requestData))
+
+		if 'error' in response:
+			raise Exception(response['error'])
+
+		self.setPrompt(response['name'])
+
+		if not initial:
+			print
+			print response['response']
+			print
 
 
 	def do_ol(self,line,echo = True):
 		'Find users who are online'
 		self.updateMessages()
-		self.Socket.send('ol')
-		response = self.Socket.recv(1024)
+
+		requestData = {
+			'type' : 'ol', 
+		}
+
+		response = json.loads(self.Request(requestData))
+
 		if echo:
-			print response
-		words = response.split('\n')
-		self.namesList = filter(lambda word : ChatClient.validUsername(word), words)
+			print 
+			print '-------------'
+			print 'ONLINE USERS:'
+			print '-------------'
+			for user in response:
+				print user
+			print
+			print
+
+		self.namesList = response
 
 
 	def do_messages(self,line):
 		'View all the received messages'
 		self.updateMessages()
 		self.updateUsers()
-		self.Socket.send('messages ' + line)
-		response = self.Socket.recv(1024)
-		print response
 
+		requestData = {
+			'type' : 'messages',
+			'username' : line.strip()
+		}
+
+		response = json.loads(self.Request(requestData))
+		header = 'MESSAGES FROM ' + response['sender'] + ':'
+
+		print 
+		print '-' * len(header)
+		print header
+		print '-' * len(header)
+
+		for message in response['messages']:
+			print message
+
+		print
+		print
 
 	def complete_messages(self, text, *ignore):
 		return [name for name in self.namesList if name.startswith(text)]
@@ -134,7 +182,10 @@ class ChatClient(cmd.Cmd):
 		self.Socket.setblocking(False)
 		try:
 			data = self.Socket.recv(1024)
-			print 'NEW MESSAGE!\n' + data
+			print
+			print 'NEW MESSAGE!\n------------\n' + data
+			print
+
 		except Exception:
 			pass	# No messages received
 		self.Socket.setblocking(True)

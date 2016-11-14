@@ -1,4 +1,5 @@
 #include "ChatServer.h"
+#include "cJSON/cJSON.h"
 #include <sstream>
 #include <algorithm>
 
@@ -26,10 +27,11 @@ void ChatServer::delClient(int clientFD){
 
 
 void ChatServer::setName(socketIterator& sockIter, std::string newName){
+	cJSON* responseObject = cJSON_CreateObject();
 
 	if(userToID.find(newName) != userToID.end()){
-		std::string error = "ERROR : username already exists!";
-		sendMessage(sockIter, error);
+		cJSON_AddItemToObject(responseObject, "error", cJSON_CreateString("Username already \
+			exists!"));
 	}
 	else{
 		std::string oldName = IDToUser[*sockIter];
@@ -42,9 +44,12 @@ void ChatServer::setName(socketIterator& sockIter, std::string newName){
 		while(!pendingMessages[oldName].empty())pendingMessages[oldName].pop();
 		userToID.erase(oldName);
 
-		std::string response = "\nRename successful!\n";
-		sendMessage(sockIter, response);
+		cJSON_AddItemToObject(responseObject, "name", cJSON_CreateString(newName.c_str()));
+		cJSON_AddItemToObject(responseObject, "response", cJSON_CreateString("RENAME SUCCESSFUL!"));
 	}
+
+	sendMessage(sockIter, std::string(cJSON_Print(responseObject)));
+	cJSON_Delete(responseObject);	
 }
 
 void ChatServer::sendMessage(socketIterator& sockIter, std::string message){
@@ -61,58 +66,78 @@ void ChatServer::sendMessage(socketIterator& sockIter, std::string message){
 
 
 void ChatServer::findOnlineUsers(socketIterator& sockIter){
-	std::string response = "\nOnline users:\n";
+	cJSON* usersObject = cJSON_CreateArray();
+	cJSON* prev = NULL;
+
 	for(userIterator userIter = userToID.begin(); userIter!=userToID.end(); userIter++){
-		response+=(userIter->first);
-		response+="\n";
+		cJSON* message = cJSON_CreateString((userIter->first).c_str());
+		if(prev == NULL){
+			usersObject->child = message;
+		}
+		else{
+			prev->next = message;
+			message->prev = prev;
+		}
+		prev = message;
 	}
-	response+="\n";
-	sendMessage(sockIter, response);
+
+	sendMessage(sockIter, cJSON_Print(usersObject));
+	cJSON_Delete(usersObject);
 }
 
 
 void ChatServer::addMessage(socketIterator& sockIter, std::string sender, 
 	std::string receiver, std::string text){
+
 	if(inbox.find(receiver) == inbox.end())inbox[receiver];
 	if(inbox[receiver].find(sender) == inbox[receiver].end())inbox[receiver][sender];
 	inbox[receiver][sender].push_back(text);
 	pendingMessages[receiver].push(sender + ": " + text);
-	std::string response = "\nMessage sent!\n";
-	sendMessage(sockIter, response);
+
+	cJSON* responseObject = cJSON_CreateObject();
+	cJSON_AddItemToObject(responseObject, "message", cJSON_CreateString("Message sent!"));
+	sendMessage(sockIter, std::string(cJSON_Print(responseObject)));
+	cJSON_Delete(responseObject);
 }
 
 
 void ChatServer::getMessages(socketIterator& sockIter, std::string from, std::string to){
-	std::string response = "\nMessages from user " + from + "\n";
-	if(inbox.find(to) == inbox.end())inbox[to];
-	if(inbox.find(from) == inbox.end())inbox[to][from];
-	for(std::string userMessage : inbox[to][from]){
-		response+=userMessage.c_str();
-		response+="\n";
+	cJSON* responseObject = cJSON_CreateObject();
+	cJSON* messages = cJSON_CreateArray(), *prev = NULL;
+
+	if( (inbox.find(to) != inbox.end()) && (inbox[to].find(from) != inbox[to].end()) ){	
+		for(std::string userMessage : inbox[to][from]){
+			cJSON* message = cJSON_CreateString(userMessage.c_str());
+			if(prev == NULL){
+				messages->child = message;
+			}
+			else{
+				prev->next = message;
+				message->prev = prev;
+			}
+			prev = message;
+		}
 	}
-	response+="\n";
-	sendMessage(sockIter, response);
+
+	cJSON_AddItemToObject(responseObject, "sender", cJSON_CreateString(from.c_str()));
+	cJSON_AddItemToObject(responseObject, "messages", messages);
+	sendMessage(sockIter, std::string(cJSON_Print(responseObject)));
+	cJSON_Delete(responseObject);
 }
 
 
 void ChatServer::parseMessage(char* msg, socketIterator& sockIter) {
-	std::string message = std::string(msg);
-	std::string type;
-	std::stringstream messageStream(message);
-
-	std::string commands[] = {
+	std::vector<std::string> commands = {
 		"psend", "gsend", "ol", "messages", "name"
 	};
-	int noOfCommands = 5;
 
 	int clientFD = *sockIter;
 	std::string sender = IDToUser[clientFD];
-	printf("\nMessage received from client %d : %s\n", clientFD, msg);
-
-	getline(messageStream, type, ' ');
+	cJSON* requestObject = cJSON_Parse(msg);
+	std::string type = std::string(cJSON_GetObjectItem(requestObject,"type")->valuestring);
 
 	// Command not recognised
-	if( std::find(commands, commands+noOfCommands, type) >= commands+noOfCommands ){
+	if( std::find(commands.begin(), commands.end(), type) == commands.end() ){
 		std::string error = "\nERROR : Unrecognised command '" + type + "'\n";
 		sendMessage(sockIter, error);
 		return ;
@@ -120,13 +145,13 @@ void ChatServer::parseMessage(char* msg, socketIterator& sockIter) {
 
 	if(type == "psend"){
 		std::string receiver,text;
-		getline(messageStream, receiver, ' ');
-		getline(messageStream, text);
+		receiver = std::string(cJSON_GetObjectItem(requestObject,"username")->valuestring);
+		text = std::string(cJSON_GetObjectItem(requestObject,"message")->valuestring);
 		addMessage(sockIter, sender, receiver, text);
 	}
 	else if(type == "messages"){
 		std::string user;
-		getline(messageStream, user, ' ');
+		user = std::string(cJSON_GetObjectItem(requestObject,"username")->valuestring);
 		getMessages(sockIter, user, sender);
 	}
 	else if(type == "ol"){
@@ -134,7 +159,7 @@ void ChatServer::parseMessage(char* msg, socketIterator& sockIter) {
 	}
 	else if(type == "name"){
 		std::string newName;
-		getline(messageStream, newName, ' ');
+		newName = std::string(cJSON_GetObjectItem(requestObject,"newName")->valuestring);
 		setName(sockIter, newName);
 	}
 	else if(type == "gsend"){
