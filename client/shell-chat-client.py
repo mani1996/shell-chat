@@ -28,7 +28,7 @@ class ChatClient(cmd.Cmd):
 		self.Socket.connect(('localhost',int(port)))
 		self.do_name(username, True)
 		self.setPrompt(username)
-		self.namesList = []
+		self.namesList = [username]
 
 
 	def setPrompt(self, name):
