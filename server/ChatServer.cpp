@@ -12,6 +12,11 @@ void ChatServer::addClient(int clientFD, sockaddr_storage clientAddr, socklen_t 
 }
 
 
+std::string ChatServer::createMessage(std::string sender, std::string text){
+	return sender + ":" + text;
+}
+
+
 void ChatServer::delClient(int clientFD){
 	std::string user = IDToUser[clientFD];
 
@@ -57,7 +62,7 @@ void ChatServer::sendMessage(socketIterator& sockIter, std::string message){
 	if(sendStatus == -1){
 		// Send message when select() puts the receiver in writeSet
 		printError("send function call");
-		pendingMessages[IDToUser[*sockIter]].push(IDToUser[*sockIter] + ": " + message);
+		pendingMessages[IDToUser[*sockIter]].push(createMessage(IDToUser[*sockIter],message));
 	}
 
 	sockIter++;
@@ -89,8 +94,9 @@ void ChatServer::addMessage(socketIterator& sockIter, std::string sender,
 	std::string receiver, std::string text){
 	if(inbox.find(receiver) == inbox.end())inbox[receiver];
 	if(inbox[receiver].find(sender) == inbox[receiver].end())inbox[receiver][sender];
-	inbox[receiver][sender].push_back(sender + ":" + text);
-	pendingMessages[receiver].push(sender + ": " + text);
+	std::string message = createMessage(sender,text);
+	inbox[receiver][sender].push_back(message);
+	pendingMessages[receiver].push(message);
 
 	cJSON* responseObject = cJSON_CreateObject();
 	cJSON_AddItemToObject(responseObject, "message", cJSON_CreateString("Message sent!"));
