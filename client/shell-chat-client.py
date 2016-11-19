@@ -9,7 +9,13 @@ class ChatClient(cmd.Cmd):
 
 	prompt = '>>> '
 	intro = '''
-	SHELL CHAT
+
+	SSSS  H  H  EEEE L     L        CCCC  H  H    AA   TTTTT
+	S     H  H  E    L     L        C     H  H   A  A    T
+	SSSS  HHHH  EEEE L     L        C     HHHH   AAAA    T
+	   S  H  H  E    L     L        C     H  H   A  A    T
+	SSSS  H  H  EEEE LLLL  LLLL     CCCC  H  H   A  A    T
+
 	Chat with your buddies the programmer way :)
 
 	Type "help" to view list of commands. 
@@ -17,6 +23,8 @@ class ChatClient(cmd.Cmd):
 
 	NOTE : Automatic refresh isn't available as of now. 
 	Press Enter to check for new messages
+
+	An app by Manikantan Narasimhan
 	'''
 	doc_header = 'Commands'
 	ruler = '-'
