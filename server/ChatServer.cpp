@@ -35,8 +35,7 @@ void ChatServer::setName(socketIterator& sockIter, std::string newName){
 	cJSON* responseObject = cJSON_CreateObject();
 
 	if(userToID.find(newName) != userToID.end()){
-		cJSON_AddItemToObject(responseObject, "error", cJSON_CreateString("Username already \
-			exists!"));
+		cJSON_AddItemToObject(responseObject, "error", cJSON_CreateString("Username already exists!"));
 	}
 	else{
 		std::string oldName = IDToUser[*sockIter];
