@@ -10,8 +10,10 @@ Server::Server(std::string port, int backlog = 10){
 
 
 void Server::printError(char* target){
-	strcat(target," - Error");
-	perror(target);
+	std::string error = std::string(target);
+	error+=" - Error";
+	perror(error.c_str());
+	errno = 0; // Reset error status
 }
 
 

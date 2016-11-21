@@ -30,10 +30,11 @@ class ChatClient(cmd.Cmd):
 	ruler = '-'
 
 
-	def __init__(self, port, username):
+	def __init__(self, config):
 		cmd.Cmd.__init__(self)
 		self.Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-		self.Socket.connect(('localhost',int(port)))
+		self.Socket.connect((config['address'] ,int(config['port'])))
+		username = config['username']
 		self.do_name(username, True)
 		self.setPrompt(username)
 		self.namesList = [username]
@@ -199,8 +200,19 @@ class ChatClient(cmd.Cmd):
 		self.Socket.setblocking(True)
 
 
+def setConfig(config):
+	requiredParams = {'username', 'address', 'port'}
+	providedParams = set(config.keys())
+
+	if not requiredParams.issubset(providedParams):
+		print 'Following settings are required in config.json : ' + ','.join(requiredParams)
+		return
+
+	ChatClient(config).cmdloop()
+
 if __name__ == '__main__':
-	if len(sys.argv) > 2:
-		ChatClient(sys.argv[1], sys.argv[2]).cmdloop()
-	else:
-		raise Exception('usage: greet-client.py <port> <username>')
+	try:
+		config = json.loads(open(sys.argv[1]).read())
+	except:
+		config = json.loads(open('default.json').read())
+	setConfig(config)

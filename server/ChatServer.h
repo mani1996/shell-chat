@@ -18,6 +18,7 @@ protected:
 	void addClient(int clientFD, sockaddr_storage clientAddr, socklen_t acceptSize);	
 	void addMessage(socketIterator& sockIter, std::string sender, std::string receiver, std::string text);
 	void communicate();
+	std::string createMessage(std::string sender, std::string text);
 	void delClient(int clientFD); 
 	void findOnlineUsers(socketIterator& sockIter);
 	void getMessages(socketIterator& sockIter, std::string from, std::string to);

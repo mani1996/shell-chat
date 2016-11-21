@@ -12,12 +12,17 @@ void ChatServer::addClient(int clientFD, sockaddr_storage clientAddr, socklen_t 
 }
 
 
+std::string ChatServer::createMessage(std::string sender, std::string text){
+	return sender + ":" + text;
+}
+
+
 void ChatServer::delClient(int clientFD){
 	std::string user = IDToUser[clientFD];
 
 	// Clear-up routine
-	inbox[user].clear();
 	while(!pendingMessages[user].empty())pendingMessages[user].pop();
+	inbox.erase(user);
 	userToID.erase(user);
 	IDToUser.erase(clientFD);
 	liveSockets.erase(clientFD);
@@ -30,8 +35,7 @@ void ChatServer::setName(socketIterator& sockIter, std::string newName){
 	cJSON* responseObject = cJSON_CreateObject();
 
 	if(userToID.find(newName) != userToID.end()){
-		cJSON_AddItemToObject(responseObject, "error", cJSON_CreateString("Username already \
-			exists!"));
+		cJSON_AddItemToObject(responseObject, "error", cJSON_CreateString("Username already exists!"));
 	}
 	else{
 		std::string oldName = IDToUser[*sockIter];
@@ -54,14 +58,13 @@ void ChatServer::setName(socketIterator& sockIter, std::string newName){
 
 void ChatServer::sendMessage(socketIterator& sockIter, std::string message){
 	int sendStatus = send(*sockIter, message.c_str(), message.length(), 0);
-
 	if(sendStatus == -1){
+		// Send message when select() puts the receiver in writeSet
 		printError("send function call");
-		delClient(*(sockIter++));
+		pendingMessages[IDToUser[*sockIter]].push(createMessage(IDToUser[*sockIter],message));
 	}
-	else{
-		sockIter++;
-	}
+
+	sockIter++;
 }
 
 
@@ -88,11 +91,11 @@ void ChatServer::findOnlineUsers(socketIterator& sockIter){
 
 void ChatServer::addMessage(socketIterator& sockIter, std::string sender, 
 	std::string receiver, std::string text){
-
 	if(inbox.find(receiver) == inbox.end())inbox[receiver];
 	if(inbox[receiver].find(sender) == inbox[receiver].end())inbox[receiver][sender];
-	inbox[receiver][sender].push_back(text);
-	pendingMessages[receiver].push(sender + ": " + text);
+	std::string message = createMessage(sender,text);
+	inbox[receiver][sender].push_back(message);
+	pendingMessages[receiver].push(message);
 
 	cJSON* responseObject = cJSON_CreateObject();
 	cJSON_AddItemToObject(responseObject, "message", cJSON_CreateString("Message sent!"));
@@ -208,6 +211,7 @@ void ChatServer::communicate(){
 							delClient(*(sockIter++));
 						}
 						else if(msgLength == 0){
+							printf("Connection closed by client\n");
 							delClient(*(sockIter++));
 						}
 						else{
@@ -216,8 +220,7 @@ void ChatServer::communicate(){
 						}
 						incrementPtr = true;
 					}
-						
-					if(FD_ISSET(currentSocket, &_writeSet)){
+					else if(FD_ISSET(currentSocket, &_writeSet)){
 						std::string username = IDToUser[currentSocket];
 
 						if(!pendingMessages[username].empty()){
