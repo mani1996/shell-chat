@@ -30,7 +30,7 @@ protected:
 	void init();
 	void findAndBind(addrinfo* addrNode);
 	virtual void communicate() = 0;
-	virtual void addClient(int clientFD, sockaddr_storage clientAddr, socklen_t acceptSize) = 0;
+	virtual void addClient(int clientFD, sockaddr_storage clientAddr, socklen_t acceptSize);
 	virtual void delClient(int clientFD);
 
 public:

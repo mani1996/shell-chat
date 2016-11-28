@@ -117,6 +117,12 @@ bool Server::isSet() const{
 }
 
 
+void Server::addClient(int clientFD, sockaddr_storage clientAddr, socklen_t acceptSize){
+	liveSockets.insert(clientFD);
+	FD_SET(clientFD, &_masterSet);
+}
+
+
 void Server::delClient(int clientFD){
 	FD_CLR(clientFD, &_masterSet);
 	close(clientFD);
