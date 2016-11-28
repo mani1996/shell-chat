@@ -1,5 +1,4 @@
 #include "ChatServer.h"
-#include "cJSON/cJSON.h"
 #include <sstream>
 #include <algorithm>
 
@@ -7,6 +6,13 @@
 std::vector<std::string> ChatServer::commands = {
 	"psend", "gsend", "ol", "messages", "name"
 };
+
+
+cJSON* ChatServer::errorObject(std::string errorMessage){
+	cJSON* error = cJSON_CreateObject();
+	cJSON_AddItemToObject(error, "error", cJSON_CreateString(errorMessage.c_str()));
+	return error;
+}
 
 
 void ChatServer::addClient(int clientFD, sockaddr_storage clientAddr, socklen_t acceptSize){
@@ -35,6 +41,14 @@ void ChatServer::setName(socketIterator& sockIter, std::string newName){
 	}
 	else{
 		User* user = userBuilder->getUser(*sockIter);
+
+		if(user == NULL){
+			cJSON* error = errorObject("Socket doesn't exist. This shouldn't be happening");
+			sendMessage(sockIter, std::string(cJSON_Print(error)));
+			cJSON_Delete(error);
+			return ;
+		}
+
 		user->setName(newName);
 		cJSON_AddItemToObject(responseObject, "name", cJSON_CreateString(newName.c_str()));
 		cJSON_AddItemToObject(responseObject, "response", cJSON_CreateString("RENAME SUCCESSFUL!"));
@@ -43,6 +57,7 @@ void ChatServer::setName(socketIterator& sockIter, std::string newName){
 	sendMessage(sockIter, std::string(cJSON_Print(responseObject)));
 	cJSON_Delete(responseObject);	
 }
+
 
 void ChatServer::sendMessage(socketIterator& sockIter, std::string message){
 	UserBuilder* userBuilder = UserBuilder::getInstance();
@@ -82,6 +97,14 @@ void ChatServer::addMessage(socketIterator& sockIter, std::string sender,
 	std::string receiver, std::string text){
 	UserBuilder* userBuilder = UserBuilder::getInstance();
 	User* receiveUser = userBuilder->getUser(receiver);
+
+	if(receiveUser == NULL){
+		cJSON* error = errorObject("Invalid request. Receiver does not exist!");
+		sendMessage(sockIter, std::string(cJSON_Print(error)));
+		cJSON_Delete(error);
+		return ;
+	}
+
 	receiveUser->addMessage(sender, createMessage(userBuilder->getUser(sender),text));
 	cJSON* responseObject = cJSON_CreateObject();
 	cJSON_AddItemToObject(responseObject, "message", cJSON_CreateString("Message sent!"));
@@ -94,6 +117,15 @@ void ChatServer::getMessages(socketIterator& sockIter, std::string from, std::st
 	cJSON* responseObject = cJSON_CreateObject();
 	cJSON* messages = cJSON_CreateArray(), *prev = NULL;
 	UserBuilder* userBuilder = UserBuilder::getInstance();
+	User* fromUser = userBuilder->getUser(from);
+
+	if(fromUser == NULL){
+		cJSON* error = errorObject("Invalid request. Mentioned user does not exist!");
+		sendMessage(sockIter, std::string(cJSON_Print(error)));
+		cJSON_Delete(error);
+		return ;
+	}
+
 	std::vector<std::string> messageList = userBuilder->getUser(to)->getMessagesFrom(from);
 
 	for(std::string userMessage : messageList){
@@ -227,7 +259,6 @@ void ChatServer::communicate(){
 	}
 	delete[] buf;
 }
-
 
 
 int main(){

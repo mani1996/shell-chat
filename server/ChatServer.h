@@ -5,6 +5,7 @@
 #include <map>
 #include <queue>
 #include <vector>
+#include "cJSON/cJSON.h"
 
 
 class ChatServer: public Server{
@@ -20,6 +21,7 @@ protected:
 	std::string createMessage(User* sender, std::string text);
 	void delClient(int clientFD); 
 	void findOnlineUsers(socketIterator& sockIter);
+	cJSON* errorObject(std::string errorMessage);
 	void getMessages(socketIterator& sockIter, std::string from, std::string to);
 	void parseMessage(char* msg, socketIterator& sockIter);
 	void sendMessage(socketIterator& sockIter, std::string message);

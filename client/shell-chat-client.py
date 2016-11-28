@@ -77,9 +77,14 @@ class ChatClient(cmd.Cmd):
 
 		response = json.loads(self.Request(requestData))
 
-		print
-		print response['message']
-		print
+		if 'error' in response:
+			print
+			print 'ERROR: ' + response['error']
+			print
+		else:
+			print
+			print response['message']
+			print
 
 
 	def complete_psend(self, text, *ignore):
@@ -117,14 +122,18 @@ class ChatClient(cmd.Cmd):
 		response = json.loads(self.Request(requestData))
 
 		if 'error' in response:
-			raise Exception(response['error'])
-
-		self.setPrompt(response['name'])
-
-		if not initial:
-			print
-			print response['response']
-			print
+			if initial:
+				raise Exception(response['error'])
+			else:
+				print
+				print 'ERROR: ' + response['error']
+				print
+		else:
+			self.setPrompt(response['name'])
+			if not initial:
+				print
+				print response['response']
+				print
 
 
 	def do_ol(self,line,echo = True):
@@ -161,18 +170,24 @@ class ChatClient(cmd.Cmd):
 		}
 
 		response = json.loads(self.Request(requestData))
-		header = 'MESSAGES FROM ' + response['sender'] + ':'
 
-		print 
-		print '-' * len(header)
-		print header
-		print '-' * len(header)
+		if 'error' in response:
+			print
+			print 'ERROR: ' + response['error']
+			print
+		else:
+			header = 'MESSAGES FROM ' + response['sender'] + ':'
+			print
+			print '-' * len(header)
+			print header
+			print '-' * len(header)
 
-		for message in response['messages']:
-			print message
+			for message in response['messages']:
+				print message
 
-		print
-		print
+			print
+			print
+
 
 	def complete_messages(self, text, *ignore):
 		return [name for name in self.namesList if name.startswith(text)]
