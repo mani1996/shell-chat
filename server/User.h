@@ -9,7 +9,7 @@
 // A class describing each user in chatroom
 class User{
 	std::string username;
-	std::map<std::string, std::vector<std::string> > inbox; // Map<Username, List of messages>
+	std::map<int, std::vector<std::string> > inbox; // Map<Socket FD, List of messages>
 	std::queue<std::string> pendingMessages;
 
 public:

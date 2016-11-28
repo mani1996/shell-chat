@@ -13,8 +13,10 @@ std::string User::getName(){
 
 
 void User::addMessage(std::string sender, std::string message){
-	if(inbox.find(sender) == inbox.end())inbox[sender];
-	inbox[sender].push_back(message);
+	UserBuilder* userBuilder = UserBuilder::getInstance();
+	int id = userBuilder->getID(sender);
+	if(inbox.find(id) == inbox.end())inbox[id];
+	inbox[id].push_back(message);
 	pendingMessages.push(message);
 }
 
@@ -42,7 +44,7 @@ bool User::hasPendingMessages(){
 
 
 std::vector<std::string> User::getMessagesFrom(std::string username){
-	return inbox[username];
+	return inbox[(UserBuilder::getInstance())->getID(username)];
 }
 
 
