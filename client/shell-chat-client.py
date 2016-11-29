@@ -65,19 +65,19 @@ class ChatClient(cmd.Cmd):
 		'Send message privately to an user. Syntax is "psend <username> <message>"'
 		self.updateMessages()
 		self.updateUsers()
-
 		spacePos = line.find(' ')
-		assert(0 < spacePos < len(line)-1)
 
-		requestData = {
-			'type' : 'psend',
-			'username' : line[:spacePos],
-			'message' : line[spacePos+1:]
-		}
+		if spacePos != -1:
+			requestData = {
+				'type' : 'psend',
+				'username' : line[:spacePos],
+				'message' : line[spacePos+1:]
+			}
+			response = json.loads(self.Request(requestData))
+		else:
+			response = {'error' : 'Invalid request'}
 
-		response = json.loads(self.Request(requestData))
-
-		if 'error' in response:
+		if spacePos == -1 or 'error' in response:
 			print
 			print 'ERROR: ' + response['error']
 			print
