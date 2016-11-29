@@ -265,5 +265,6 @@ void ChatServer::communicate(){
 int main(){
 	Server* chatServer = new ChatServer("8132");
 	chatServer->listenAndAccept();
+	delete chatServer;
 	return 0;
 }

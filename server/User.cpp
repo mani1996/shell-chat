@@ -104,6 +104,13 @@ UserBuilder* UserBuilder::getInstance(){
 }
 
 
+UserBuilder::~UserBuilder(){
+	for(IDIterator it = IDToUser.begin(); it != IDToUser.end(); it++){
+		delete it->second;
+	}
+}
+
+
 std::vector<User*> UserBuilder::getUsers(){
 	std::vector<User*> users;
 	for(IDIterator it = IDToUser.begin(); it != IDToUser.end(); it++){

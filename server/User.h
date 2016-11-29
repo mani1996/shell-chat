@@ -41,6 +41,7 @@ class UserBuilder{
 	std::map<std::string, userID> userToID;
 	static UserBuilder* userBuilder;
 	UserBuilder(){}
+	~UserBuilder();
 public:
 	void addUser(userID id);
 	void changeUsername(std::string newName, std::string oldName);
