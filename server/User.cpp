@@ -12,27 +12,27 @@ std::string User::getName(){
 }
 
 
-void User::addMessage(std::string sender, std::string message){
+void User::addMessage(Message message){
 	UserBuilder* userBuilder = UserBuilder::getInstance();
-	int id = userBuilder->getID(sender);
+	int id = userBuilder->getID((message.getSender())->getName());
 	if(inbox.find(id) == inbox.end())inbox[id];
 	inbox[id].push_back(message);
 	pendingMessages.push(message);
 }
 
 
-void User::addPendingMessage(std::string message){
+void User::addPendingMessage(Message message){
 	pendingMessages.push(message);
 }
 
 
-std::string User::getPendingMessage(){
+Message User::getPendingMessage(){
 	if(pendingMessages.empty()){
 		printf("No pending messages");
-		return "";
+		return Message::getEmptyMessage();
 	}
 
-	std::string nextMessage = pendingMessages.front();
+	Message nextMessage = pendingMessages.front();
 	pendingMessages.pop();
 	return nextMessage; 
 }
@@ -43,7 +43,7 @@ bool User::hasPendingMessages(){
 }
 
 
-std::vector<std::string> User::getMessagesFrom(std::string username){
+std::vector<Message> User::getMessagesFrom(std::string username){
 	return inbox[(UserBuilder::getInstance())->getID(username)];
 }
 
@@ -110,4 +110,39 @@ std::vector<User*> UserBuilder::getUsers(){
 		users.push_back(it->second);
 	}
 	return users;
+}
+
+
+Message::Message(User* sender, std::string text):sender(sender),text(text){
+	sentTime = Message::timeStamp();
+}
+
+
+Message* Message::emptyMessage = new Message(NULL, "");
+
+
+Message Message::getEmptyMessage(){
+	return *(Message::emptyMessage);
+}
+
+std::tm Message::timeStamp(){
+	std::time_t t = time(0);
+	return *(std::localtime(&t));
+}
+
+
+std::string Message::format(){
+	std::string msgFormat = "";
+	std::string dateFormat = "(" + std::to_string(sentTime.tm_mday) + "/" + std::to_string(
+		sentTime.tm_mon+1) + "/" + std::to_string(sentTime.tm_year+1900) + " - " + std::to_string(
+		sentTime.tm_hour) + ":" + std::to_string(sentTime.tm_min) + ") ";
+
+	msgFormat+=dateFormat;
+	msgFormat+=((sender->getName()) + ": " + text);
+	return msgFormat;
+}
+
+
+User* Message::getSender(){
+	return sender;
 }

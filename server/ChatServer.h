@@ -18,13 +18,12 @@ protected:
 	void addClient(int clientFD, sockaddr_storage clientAddr, socklen_t acceptSize);	
 	void addMessage(socketIterator& sockIter, std::string sender, std::string receiver, std::string text);
 	void communicate();
-	std::string createMessage(User* sender, std::string text);
 	void delClient(int clientFD); 
 	void findOnlineUsers(socketIterator& sockIter);
 	cJSON* errorObject(std::string errorMessage);
 	void getMessages(socketIterator& sockIter, std::string from, std::string to);
 	void parseMessage(char* msg, socketIterator& sockIter);
-	void sendMessage(socketIterator& sockIter, std::string message);
+	int sendMessage(socketIterator& sockIter, std::string message);
 	void setName(socketIterator& sockIter, std::string newName);
 public:
 	ChatServer(std::string port, int backlog = 10):Server(port,backlog){}

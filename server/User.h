@@ -1,26 +1,29 @@
 #ifndef USERINCLUDES
 #define USERINCLUDES
+#include <ctime>
 #include <map>
 #include <queue>
 #include <string>
 #include <vector>
 
 
+class Message;
+
 // A class describing each user in chatroom
 class User{
 	std::string username;
-	std::map<int, std::vector<std::string> > inbox; // Map<Socket FD, List of messages>
-	std::queue<std::string> pendingMessages;
+	std::map<int, std::vector<Message> > inbox; // Map<Socket FD, List of messages>
+	std::queue<Message> pendingMessages;
 
 public:
 	User(std::string name):username(name){}
 	User():username(""){}
-	void addMessage(std::string sender, std::string message);
-	void addPendingMessage(std::string message);
+	void addMessage(Message message);
+	void addPendingMessage(Message message);
 	bool hasPendingMessages();
-	std::vector<std::string> getMessagesFrom(std::string username);	
+	std::vector<Message> getMessagesFrom(std::string username);	
 	std::string getName();
-	std::string getPendingMessage();
+	Message getPendingMessage();
 	void setName(std::string name);
 };
 
@@ -49,4 +52,17 @@ public:
 	std::vector<User*> getUsers();
 };
 
+
+class Message{
+	User* sender;
+	std::string text;
+	std::tm sentTime;
+	static std::tm timeStamp();
+	static Message* emptyMessage;
+public:
+	Message(User* sender, std::string text);
+	std::string format();
+	User* getSender();
+	static Message getEmptyMessage();
+};
 #endif

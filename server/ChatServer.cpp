@@ -21,11 +21,6 @@ void ChatServer::addClient(int clientFD, sockaddr_storage clientAddr, socklen_t 
 }
 
 
-std::string ChatServer::createMessage(User* sender, std::string text){
-	return sender->getName() + ":" + text;
-}
-
-
 void ChatServer::delClient(int clientFD){
 	(UserBuilder::getInstance())->delUser(clientFD);
 	Server::delClient(clientFD);	
@@ -59,15 +54,15 @@ void ChatServer::setName(socketIterator& sockIter, std::string newName){
 }
 
 
-void ChatServer::sendMessage(socketIterator& sockIter, std::string message){
+int ChatServer::sendMessage(socketIterator& sockIter, std::string message){
 	UserBuilder* userBuilder = UserBuilder::getInstance();
 	int sendStatus = send(*sockIter, message.c_str(), message.length(), 0);
 	if(sendStatus == -1){
 		// Send message when select() puts the receiver in writeSet
 		printError("send function call");
-		userBuilder->getUser(*sockIter)->addPendingMessage(message);
 	}
 	sockIter++;
+	return sendStatus;
 }
 
 
@@ -105,10 +100,16 @@ void ChatServer::addMessage(socketIterator& sockIter, std::string sender,
 		return ;
 	}
 
-	receiveUser->addMessage(sender, createMessage(userBuilder->getUser(sender),text));
+	Message message(userBuilder->getUser(sender),text);
+	receiveUser->addMessage(message);
 	cJSON* responseObject = cJSON_CreateObject();
 	cJSON_AddItemToObject(responseObject, "message", cJSON_CreateString("Message sent!"));
-	sendMessage(sockIter, std::string(cJSON_Print(responseObject)));
+	int response = sendMessage(sockIter, std::string(cJSON_Print(responseObject)));
+
+	if(response == -1){
+		userBuilder->getUser(*sockIter)->addPendingMessage(message);
+	}
+
 	cJSON_Delete(responseObject);
 }
 
@@ -126,10 +127,10 @@ void ChatServer::getMessages(socketIterator& sockIter, std::string from, std::st
 		return ;
 	}
 
-	std::vector<std::string> messageList = userBuilder->getUser(to)->getMessagesFrom(from);
+	std::vector<Message> messageList = userBuilder->getUser(to)->getMessagesFrom(from);
 
-	for(std::string userMessage : messageList){
-		cJSON* message = cJSON_CreateString(userMessage.c_str());
+	for(Message userMessage : messageList){
+		cJSON* message = cJSON_CreateString(userMessage.format().c_str());
 		if(prev == NULL){
 			messages->child = message;
 		}
@@ -242,7 +243,7 @@ void ChatServer::communicate(){
 							std::string nextMessage = "";
 
 							while(user->hasPendingMessages()){
-								nextMessage = nextMessage + (user->getPendingMessage()) + "\n";
+								nextMessage = nextMessage + (user->getPendingMessage()).format() + "\n";
 							}
 
 							// sockIter is passed as reference to sendMessage() and incremented
